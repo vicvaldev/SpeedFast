@@ -19,7 +19,7 @@ public class Main {
         Pedido[] pedidos = { comida, encomienda, express, expressMenor };
         for (Pedido pedido : pedidos) {
             pedido.mostrarResumen();
-            System.out.println("Tiempo estimado:  " + (int) pedido.calcularTiempoEntrega() + " minutos");
+            System.out.println("Tiempo estimado de entrega:  " + (int) pedido.calcularTiempoEntrega() + " minutos");
             System.out.println();
         }
 
