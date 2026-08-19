@@ -3,13 +3,21 @@ package modelos;
 public class PedidoExpress extends Pedido {
     private double distanciaRepartidorMasCercano;
 
-    public PedidoExpress(int idPedido, String direccionEntrega, double distanciaRepartidorMasCercano) {
-        super(idPedido, direccionEntrega, "Compra Express");
+    public PedidoExpress(int idPedido, String direccionEntrega, double distanciaKm, double distanciaRepartidorMasCercano) {
+        super(idPedido, direccionEntrega, distanciaKm, "Compra Express");
         this.distanciaRepartidorMasCercano = distanciaRepartidorMasCercano;
     }
 
     public double getDistanciaRepartidorMasCercano() {
         return distanciaRepartidorMasCercano;
+    }
+
+    @Override
+    public double calcularTiempoEntrega() {
+        if (getDistanciaKm() > 5) {
+            return 10 + 5;
+        }
+        return 10;
     }
 
     @Override

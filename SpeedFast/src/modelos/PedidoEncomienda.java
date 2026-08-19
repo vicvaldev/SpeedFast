@@ -4,8 +4,8 @@ public class PedidoEncomienda extends Pedido {
     private double peso;
     private boolean embalajeValidado;
 
-    public PedidoEncomienda(int idPedido, String direccionEntrega, double peso, boolean embalajeValidado) {
-        super(idPedido, direccionEntrega, "Encomienda");
+    public PedidoEncomienda(int idPedido, String direccionEntrega, double distanciaKm, double peso, boolean embalajeValidado) {
+        super(idPedido, direccionEntrega, distanciaKm, "Encomienda");
         this.peso = peso;
         this.embalajeValidado = embalajeValidado;
     }
@@ -16,6 +16,11 @@ public class PedidoEncomienda extends Pedido {
 
     public boolean isEmbalajeValidado() {
         return embalajeValidado;
+    }
+
+    @Override
+    public double calcularTiempoEntrega() {
+        return (int) (20 + (1.5 * getDistanciaKm()));
     }
 
     @Override

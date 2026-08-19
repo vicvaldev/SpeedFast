@@ -3,13 +3,18 @@ package modelos;
 public class PedidoComida extends Pedido {
     private boolean mochilaTermica;
 
-    public PedidoComida(int idPedido, String direccionEntrega, boolean mochilaTermica) {
-        super(idPedido, direccionEntrega, "Comida");
+    public PedidoComida(int idPedido, String direccionEntrega, double distanciaKm, boolean mochilaTermica) {
+        super(idPedido, direccionEntrega, distanciaKm, "Comida");
         this.mochilaTermica = mochilaTermica;
     }
 
     public boolean tieneMochilaTermica() {
         return mochilaTermica;
+    }
+
+    @Override
+    public double calcularTiempoEntrega() {
+        return 15 + (2 * getDistanciaKm());
     }
 
     @Override
