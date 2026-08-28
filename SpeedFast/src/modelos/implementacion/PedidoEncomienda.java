@@ -1,4 +1,4 @@
-package modelos;
+package modelos.implementacion;
 
 public class PedidoEncomienda extends Pedido {
     private double peso;
@@ -20,7 +20,7 @@ public class PedidoEncomienda extends Pedido {
 
     @Override
     public double calcularTiempoEntrega() {
-        return (int) (20 + (1.5 * getDistanciaKm()));
+        return  Math.round((20 + (1.5 * getDistanciaKm())));
     }
 
     @Override
@@ -29,6 +29,7 @@ public class PedidoEncomienda extends Pedido {
         String estado = (embalajeValidado && peso <= 20.0) ? "OK" : "NO OK";
         System.out.println("→ Validando peso y embalaje... " + estado);
         System.out.println("→ Repartidor asignado automáticamente.");
+        setEstado("Asignado");
     }
 
     @Override
@@ -37,5 +38,6 @@ public class PedidoEncomienda extends Pedido {
         String estado = (embalajeValidado && peso <= 20.0) ? "OK" : "NO OK";
         System.out.println("→ Validando peso y embalaje... " + estado);
         System.out.println("→ Pedido asignado a " + nombreRepartidor);
+        setEstado("Asignado");
     }
 }

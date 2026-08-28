@@ -1,16 +1,18 @@
-package modelos;
+package modelos.implementacion;
 
 public abstract class Pedido {
     private int idPedido;
     private String direccionEntrega;
     private double distanciaKm;
     private String tipoPedido;
+    private String estado;
 
     public Pedido(int idPedido, String direccionEntrega, double distanciaKm, String tipoPedido) {
         this.idPedido = idPedido;
         this.direccionEntrega = direccionEntrega;
         this.distanciaKm = distanciaKm;
         this.tipoPedido = tipoPedido;
+        this.estado = "Reservado";
     }
 
     public int getIdPedido() {
@@ -29,6 +31,14 @@ public abstract class Pedido {
         return tipoPedido;
     }
 
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
     public void mostrarResumen() {
         System.out.println("=== Resumen del Pedido ===");
         System.out.println("ID Pedido:      " + idPedido);
@@ -42,10 +52,12 @@ public abstract class Pedido {
     public void asignarRepartidor() {
         System.out.println("Asignando repartidor...");
         System.out.println("→ Repartidor asignado automáticamente.");
+        this.estado = "Asignado";
     }
 
     public void asignarRepartidor(String nombreRepartidor) {
         System.out.println("Asignando repartidor...");
         System.out.println("→ Pedido asignado a " + nombreRepartidor);
+        this.estado = "Asignado";
     }
 }
