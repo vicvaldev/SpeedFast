@@ -1,5 +1,5 @@
 package modelos.contratos;
 
 public interface Rastreable {
-    void verHistorial();
+    void verHistorial(String nombreRepartidor);
 }

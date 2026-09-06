@@ -22,6 +22,7 @@ public class ControladorDeEnvios implements Despachable, Cancelable, Rastreable 
     public void despachar(Pedido pedido) {
         System.out.println("Despachando pedido " + pedido.getIdPedido() + "...");
         pedido.setEstado("Despachado");
+        System.out.println();
         System.out.println("→ El pedido " + pedido.getIdPedido() + " (" + pedido.getTipoPedido() + ") ha sido despachado.");
         historial.add(pedido);
     }
@@ -34,8 +35,8 @@ public class ControladorDeEnvios implements Despachable, Cancelable, Rastreable 
     }
 
     @Override
-    public void verHistorial() {
-        System.out.println("=== Historial de entregas realizadas ===");
+    public void verHistorial(String nombreRepartidor) {
+        System.out.println("=== Historial de entregas realizadas por " + nombreRepartidor + " ===");
         if (historial.isEmpty()) {
             System.out.println("→ No hay entregas registradas aún.");
             return;

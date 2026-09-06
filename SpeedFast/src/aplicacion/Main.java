@@ -1,29 +1,33 @@
 package aplicacion;
 
-import modelos.implementacion.ControladorDeEnvios;
-import modelos.implementacion.Pedido;
-import modelos.implementacion.PedidoComida;
-import modelos.implementacion.PedidoEncomienda;
-import modelos.implementacion.PedidoExpress;
+import modelos.implementacion.*;
+
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
     public static void main(String[] args) {
         System.out.println("=== SISTEMA SPEEDFAST ===");
-        System.out.println();
 
         PedidoComida comida = new PedidoComida(101, "Av. Providencia 123", 8.5, true);
         PedidoEncomienda encomienda = new PedidoEncomienda(202, "Calle Lota 456", 3.0, 12.5, true);
         PedidoExpress express = new PedidoExpress(303, "Av. Las Condes 789", 7.2, 1.8);
         PedidoExpress expressMenor = new PedidoExpress(404, "Av. Las Condes 789", 4.3, 1.8);
+        PedidoComida comida2 = new PedidoComida(505, "Pasaje Los Alerces 910", 5.0, false);
+        PedidoEncomienda encomienda2 = new PedidoEncomienda(606, "Av. Vicuña Mackenna 111", 10.2, 8.9, true);
 
-        ControladorDeEnvios controlador = new ControladorDeEnvios();
+        /*ControladorDeEnvios controlador = new ControladorDeEnvios();
 
         System.out.println("--- Reserva de pedidos ---");
         controlador.reservarPedido(comida);
         controlador.reservarPedido(encomienda);
         controlador.reservarPedido(express);
         controlador.reservarPedido(expressMenor);
-        System.out.println();
+        controlador.reservarPedido(comida2);
+        controlador.reservarPedido(encomienda2);
+        System.out.println(); */
 
         /*System.out.println("--- Resumen y tiempo de entrega ---");*/
         Pedido[] pedidos = { comida, encomienda, express, expressMenor };
@@ -34,7 +38,7 @@ public class Main {
             System.out.println();
         } */
 
-        System.out.println("--- Asignación de repartidores ---");
+        /*System.out.println("--- Asignación de repartidores ---");
         System.out.println("[Asignación manual - Pedido Comida]");
         comida.asignarRepartidor("Juan Pérez");
         System.out.println();
@@ -60,7 +64,33 @@ public class Main {
         System.out.println("Estado actual del pedido " + expressMenor.getIdPedido() + ": " + expressMenor.getEstado());
         System.out.println();
 
-        controlador.verHistorial();
+        controlador.verHistorial();*/
+
+        System.out.println();
+        System.out.println("=== SIMULACION CONCURRENTE (HILOS) ===");
+        System.out.println("Enviando 3 repartidores en paralelo...");
+
+        Repartidor juan = new Repartidor("Juan Pérez", List.of(comida, comida2));
+        Repartidor camila = new Repartidor("Camila Soto", List.of(encomienda, encomienda2));
+        Repartidor luis = new Repartidor("Luis Díaz", List.of(express, expressMenor));
+
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        executor.execute(juan);
+        executor.execute(camila);
+        executor.execute(luis);
+
+        executor.shutdown();
+
+        try {
+            boolean terminaron = executor.awaitTermination(120, TimeUnit.SECONDS);
+            if (terminaron) {
+                System.out.println();
+                System.out.println("==> Todos los repartidores terminaron sus entregas.");
+            }
+        } catch (InterruptedException e) {
+            System.out.println("Simulación interrumpida.");
+            Thread.currentThread().interrupt();
+        }
 
         /* DESARROLLO DE SEMANA 2.
         System.out.println("--- Cálculo de Tiempos ---");
