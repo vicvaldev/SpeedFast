@@ -6,7 +6,7 @@ Sistema de reparto de pedidos que gestiona de forma integral diferentes tipos de
 
 SpeedFast administra pedidos diferenciados por tipo — **Comida**, **Encomienda** y **Express** — cada uno con lógica específica de asignación de repartidor y cálculo del tiempo de entrega. Además ofrece interacciones funcionales como reservar, despachar, cancelar y consultar el historial de entregas.
 
-La simulación concurrente ejecuta a varios **repartidores como hilos independientes** que procesan sus pedidos en paralelo, cada uno recorriendo su lista, simulando la entrega con pausas aleatorias y reportando su avance en consola.
+La simulación concurrente implementa un patrón **productor-consumidor**: dos **generadores de pedidos** producen y cargan pedidos sobre una **zona de carga compartida** mientras varios **repartidores** (hilos consumidores) los retiran y entregan en paralelo, sincronizando el acceso a la sección crítica.
 
 El sistema está desacoplado mediante interfaces que separan responsabilidades comunes a distintas clases.
 
@@ -24,11 +24,14 @@ SpeedFast/
 │       │   └── Rastreable.java        (interfaz: verHistorial)
 │       └── implementacion/
 │           ├── Pedido.java            (clase abstracta base)
+│           ├── EstadoPedido.java      (enum: PENDIENTE, EN_REPARTO, ENTREGADO)
 │           ├── PedidoComida.java      (subclase Comida)
 │           ├── PedidoEncomienda.java  (subclase Encomienda)
 │           ├── PedidoExpress.java     (subclase Express)
-│           ├── ControladorDeEnvios.java (implementa las interfaces y el historial)
-│           └── Repartidor.java        (hilo de reparto, implementa Runnable)
+│           ├── ZonaDeCarga.java       (buffer acotado: synchronized + wait/notifyAll)
+│           ├── GeneradorDePedidos.java (productor, implementa Runnable)
+│           ├── ControladorDeEnvios.java (historial con ReentrantLock y contador AtomicInteger)
+│           └── Repartidor.java        (hilo de reparto/consumidor, implementa Runnable)
 ```
 
 ## Conceptos aplicados
@@ -36,7 +39,7 @@ SpeedFast/
 - **Polimorfismo**: jerarquía con clase base `Pedido` y subclases `PedidoComida`, `PedidoEncomienda` y `PedidoExpress`. Método sobrescrito `asignarRepartidor()` en cada subclase y método sobrecargado `asignarRepartidor(String nombre)`.
 - **Abstracción**: clase abstracta `Pedido` con atributos (`idPedido`, `direccionEntrega`, `distanciaKm`), método implementado `mostrarResumen()` y método abstracto `calcularTiempoEntrega()` con lógica personalizada en cada subclase.
 - **Interfaces**: `Despachable`, `Cancelable` y `Rastreable`, implementadas por la clase `ControladorDeEnvios`, que también mantiene el historial de entregas en un `ArrayList`.
-- **Concurrencia**: la clase `Repartidor` implementa `Runnable` y su método `run()` entrega los pedidos de forma secuencial, simulando el trayecto con `Thread.sleep()` usando valores aleatorios (tiempo estimado del pedido escalado + componente aleatorio). En `Main` se instancian tres repartidores con dos o más pedidos cada uno, y se ejecutan en paralelo mediante un `ExecutorService` de tamaño fijo (`newFixedThreadPool(3)`), esperando con `shutdown()`/`awaitTermination()` hasta que todos terminen sus entregas.
+- **Concurrencia y sincronización (productor-consumidor)**: la `ZonaDeCarga` es un buffer acotado bloqueante. Sus métodos `agregarPedido()` (productores) y `retirarPedido()` (consumidores) están declarados como `synchronized` y usan `wait()`/`notifyAll()`: los productores esperan cuando la zona está llena y los consumidores cuando está vacía; `cerrarProduccion()` cuenta productores activos y despierta a los consumidores solo cuando no habrá más pedidos. Dos hilos `GeneradorDePedidos` preparan pedidos en paralelo mientras los hilos `Repartidor` los retiran y entregan, simulando el tiempo con `Thread.sleep()` fuera de la sección crítica. `ControladorDeEnvios` protege su historial compartido con `ReentrantLock` y lleva el contador de entregas con `AtomicInteger`. En `Main`, 2 productores y 3 consumidores se ejecutan con `ExecutorService` (`newFixedThreadPool(5)`) y se espera su finalización con `shutdown()`/`awaitTermination()`.
 
 ## Requisitos
 

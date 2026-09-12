@@ -25,7 +25,6 @@ public class PedidoExpress extends Pedido {
         System.out.println("Asignando repartidor...");
         System.out.println("→ Repartidor más cercano con disponibilidad inmediata encontrado.");
         System.out.println("→ Repartidor asignado automáticamente.");
-        setEstado("Asignado");
     }
 
     @Override
@@ -33,6 +32,5 @@ public class PedidoExpress extends Pedido {
         System.out.println("Asignando repartidor...");
         System.out.println("→ Repartidor más cercano con disponibilidad inmediata encontrado.");
         System.out.println("→ Pedido asignado a " + nombreRepartidor);
-        setEstado("Asignado");
     }
 }

@@ -1,18 +1,16 @@
 package modelos.implementacion;
 
-import java.util.List;
-import java.util.Random;
-
 public class Repartidor implements Runnable {
-    private String nombre;
-    private List<Pedido> pedidosAsignados;
-    private Random random;
-    private ControladorDeEnvios controladorDeEnvios = new ControladorDeEnvios();
+    private static final long FACTOR_PAUSA_MS = 150L;
 
-    public Repartidor(String nombre, List<Pedido> pedidosAsignados) {
+    private final String nombre;
+    private final ZonaDeCarga zonaDeCarga;
+    private final ControladorDeEnvios controladorDeEnvios;
+
+    public Repartidor(String nombre, ZonaDeCarga zonaDeCarga, ControladorDeEnvios controladorDeEnvios) {
         this.nombre = nombre;
-        this.pedidosAsignados = pedidosAsignados;
-        this.random = new Random();
+        this.zonaDeCarga = zonaDeCarga;
+        this.controladorDeEnvios = controladorDeEnvios;
     }
 
     public String getNombre() {
@@ -21,24 +19,44 @@ public class Repartidor implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("=> " + nombre + " comienza su ruta con " + pedidosAsignados.size() + " pedido(s).");
-
-        for (Pedido pedido : pedidosAsignados) {
-            pedido.setEstado("En ruta");
-            System.out.println("Repartidor en ruta: [" + nombre + "]");
+        while (true) {
+            Pedido pedido;
             try {
-                long pausa = Math.round(pedido.calcularTiempoEntrega()) * 200L + random.nextInt(500);
-                Thread.sleep(pausa);
+                // Consumidor: espera con wait() si la zona está vacía y devuelve
+                // null solo cuando la producción cerró y la zona quedó vacía.
+                pedido = zonaDeCarga.retirarPedido();
             } catch (InterruptedException e) {
-                System.out.println("[" + nombre + "] Entrega interrumpida.");
                 Thread.currentThread().interrupt();
+                System.out.println("[Repartidor - " + nombre + "] Interrupción recibida. Finalizando.");
                 return;
             }
-            controladorDeEnvios.despachar(pedido);
-            pedido.setEstado("Entregado");
-            controladorDeEnvios.verHistorial(nombre);
+            if (pedido == null) {
+                break;
+            }
+
+            // Solo el hilo que obtuvo el pedido modifica su estado.
+            pedido.setEstado(EstadoPedido.EN_REPARTO);
+            System.out.println("[Repartidor - " + nombre + "] Retirando pedido #" + pedido.getIdPedido() + "...");
+            System.out.println("[Repartidor - " + nombre + "] Estado: " + pedido.getEstado());
+            System.out.println("[Repartidor - " + nombre + "] Entregando pedido #" + pedido.getIdPedido() + "...");
+
+            try {
+                // Simulacion del tiempo de entrega (fuera de la sección crítica).
+                long pausa = Math.round(pedido.calcularTiempoEntrega()) * FACTOR_PAUSA_MS
+                        + (pedido.getIdPedido() % 5) * 130L;
+                Thread.sleep(pausa);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                System.out.println("[Repartidor - " + nombre + "] Entrega interrumpida.");
+                return;
+            }
+
+            pedido.setEstado(EstadoPedido.ENTREGADO);
+            int nroEntrega = controladorDeEnvios.registrarEntrega(pedido);
+            System.out.println("[Repartidor - " + nombre + "] Estado: " + pedido.getEstado()
+                    + " (pedido #" + pedido.getIdPedido() + " entregado). Entrega registrada No. " + nroEntrega);
         }
 
-        System.out.println("==> " + nombre + " terminó todos sus pedidos.");
+        System.out.println("[Repartidor - " + nombre + "] No hay mas pedidos. Finalizando turno.");
     }
 }

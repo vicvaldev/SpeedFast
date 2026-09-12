@@ -23,7 +23,6 @@ public class PedidoComida extends Pedido {
         String estado = mochilaTermica ? "OK" : "NO OK";
         System.out.println("→ Verificando mochila térmica... " + estado);
         System.out.println("→ Repartidor asignado automáticamente.");
-        setEstado("Asignado");
     }
 
     @Override
@@ -32,6 +31,5 @@ public class PedidoComida extends Pedido {
         String estado = mochilaTermica ? "OK" : "NO OK";
         System.out.println("→ Verificando mochila térmica... " + estado);
         System.out.println("→ Pedido asignado a " + nombreRepartidor);
-        setEstado("Asignado");
     }
 }

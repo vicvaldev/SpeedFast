@@ -5,38 +5,64 @@ public abstract class Pedido {
     private String direccionEntrega;
     private double distanciaKm;
     private String tipoPedido;
-    private String estado;
+    private EstadoPedido estado;
 
     public Pedido(int idPedido, String direccionEntrega, double distanciaKm, String tipoPedido) {
         this.idPedido = idPedido;
         this.direccionEntrega = direccionEntrega;
         this.distanciaKm = distanciaKm;
         this.tipoPedido = tipoPedido;
-        this.estado = "Reservado";
+        this.estado = EstadoPedido.PENDIENTE;
     }
 
     public int getIdPedido() {
         return idPedido;
     }
 
+    public void setIdPedido(int idPedido) {
+        this.idPedido = idPedido;
+    }
+
     public String getDireccionEntrega() {
         return direccionEntrega;
+    }
+
+    public void setDireccionEntrega(String direccionEntrega) {
+        this.direccionEntrega = direccionEntrega;
     }
 
     public double getDistanciaKm() {
         return distanciaKm;
     }
 
+    public void setDistanciaKm(double distanciaKm) {
+        this.distanciaKm = distanciaKm;
+    }
+
     public String getTipoPedido() {
         return tipoPedido;
     }
 
-    public String getEstado() {
+    public void setTipoPedido(String tipoPedido) {
+        this.tipoPedido = tipoPedido;
+    }
+
+    public EstadoPedido getEstado() {
         return estado;
     }
 
-    public void setEstado(String estado) {
+    public void setEstado(EstadoPedido estado) {
         this.estado = estado;
+    }
+
+    public void setEstado(String nuevoEstado) {
+        this.estado = EstadoPedido.valueOf(nuevoEstado);
+    }
+
+    @Override
+    public String toString() {
+        return "Pedido #" + idPedido + " | " + tipoPedido + " | Destino: "
+                + direccionEntrega + " | Estado: " + estado;
     }
 
     public void mostrarResumen() {
@@ -52,12 +78,10 @@ public abstract class Pedido {
     public void asignarRepartidor() {
         System.out.println("Asignando repartidor...");
         System.out.println("→ Repartidor asignado automáticamente.");
-        this.estado = "Asignado";
     }
 
     public void asignarRepartidor(String nombreRepartidor) {
         System.out.println("Asignando repartidor...");
         System.out.println("→ Pedido asignado a " + nombreRepartidor);
-        this.estado = "Asignado";
     }
 }

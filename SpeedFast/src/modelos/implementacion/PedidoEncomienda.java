@@ -29,7 +29,6 @@ public class PedidoEncomienda extends Pedido {
         String estado = (embalajeValidado && peso <= 20.0) ? "OK" : "NO OK";
         System.out.println("→ Validando peso y embalaje... " + estado);
         System.out.println("→ Repartidor asignado automáticamente.");
-        setEstado("Asignado");
     }
 
     @Override
@@ -38,6 +37,5 @@ public class PedidoEncomienda extends Pedido {
         String estado = (embalajeValidado && peso <= 20.0) ? "OK" : "NO OK";
         System.out.println("→ Validando peso y embalaje... " + estado);
         System.out.println("→ Pedido asignado a " + nombreRepartidor);
-        setEstado("Asignado");
     }
 }
