@@ -13,6 +13,11 @@ public class PedidoComida extends Pedido {
     }
 
     @Override
+    public boolean validarEntrega() {
+        return mochilaTermica;
+    }
+
+    @Override
     public double calcularTiempoEntrega() {
         return 15 + (2 * getDistanciaKm());
     }
@@ -22,7 +27,7 @@ public class PedidoComida extends Pedido {
         System.out.println("Asignando repartidor...");
         String estado = mochilaTermica ? "OK" : "NO OK";
         System.out.println("→ Verificando mochila térmica... " + estado);
-        System.out.println("→ Repartidor asignado automáticamente.");
+        super.asignarRepartidor();
     }
 
     @Override
@@ -30,6 +35,6 @@ public class PedidoComida extends Pedido {
         System.out.println("Asignando repartidor...");
         String estado = mochilaTermica ? "OK" : "NO OK";
         System.out.println("→ Verificando mochila térmica... " + estado);
-        System.out.println("→ Pedido asignado a " + nombreRepartidor);
+        super.asignarRepartidor(nombreRepartidor);
     }
 }

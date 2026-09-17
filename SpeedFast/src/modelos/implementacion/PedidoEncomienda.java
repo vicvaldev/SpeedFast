@@ -19,6 +19,11 @@ public class PedidoEncomienda extends Pedido {
     }
 
     @Override
+    public boolean validarEntrega() {
+        return embalajeValidado && peso <= 20.0;
+    }
+
+    @Override
     public double calcularTiempoEntrega() {
         return  Math.round((20 + (1.5 * getDistanciaKm())));
     }
@@ -28,7 +33,7 @@ public class PedidoEncomienda extends Pedido {
         System.out.println("Asignando repartidor...");
         String estado = (embalajeValidado && peso <= 20.0) ? "OK" : "NO OK";
         System.out.println("→ Validando peso y embalaje... " + estado);
-        System.out.println("→ Repartidor asignado automáticamente.");
+        super.asignarRepartidor();
     }
 
     @Override
@@ -36,6 +41,6 @@ public class PedidoEncomienda extends Pedido {
         System.out.println("Asignando repartidor...");
         String estado = (embalajeValidado && peso <= 20.0) ? "OK" : "NO OK";
         System.out.println("→ Validando peso y embalaje... " + estado);
-        System.out.println("→ Pedido asignado a " + nombreRepartidor);
+        super.asignarRepartidor(nombreRepartidor);
     }
 }

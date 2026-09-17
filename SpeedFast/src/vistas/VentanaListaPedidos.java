@@ -10,15 +10,21 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.List;
 
 public class VentanaListaPedidos extends JFrame {
     private final List<Pedido> pedidos;
+    private final VentanaPrincipal principal;
+    private final Runnable actualizador;
     private final DefaultTableModel modelo;
     private final JTable tabla;
 
-    public VentanaListaPedidos(List<Pedido> pedidos) {
+    public VentanaListaPedidos(List<Pedido> pedidos, VentanaPrincipal principal) {
         this.pedidos = pedidos;
+        this.principal = principal;
+        this.actualizador = this::actualizarTabla;
 
         setTitle("Listado de Pedidos");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -42,6 +48,14 @@ public class VentanaListaPedidos extends JFrame {
         panelBotones.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         panelBotones.add(btnRefrescar);
         add(panelBotones, BorderLayout.SOUTH);
+
+        principal.agregarActualizador(actualizador);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                principal.quitarActualizador(actualizador);
+            }
+        });
 
         actualizarTabla();
     }

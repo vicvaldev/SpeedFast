@@ -57,7 +57,7 @@ La aplicación se inicia desde `main.Main`, que ejecuta `new VentanaPrincipal()`
 
 1. **Registrar pedido**: abre `VentanaRegistroPedido`, un formulario con campos ID, Dirección y un `JComboBox` de tipo (Comida, Encomienda, Express). El botón **Guardar** valida los campos (ID numérico positivo y sin duplicados, dirección no vacía), crea la subclase de `Pedido` correspondiente, la agrega a la lista común y confirma con `JOptionPane`.
 2. **Listar pedidos**: abre `VentanaListaPedidos`, una tabla `JTable` (ID, Tipo, Dirección, Estado) alimentada por un `DefaultTableModel` que se puede refrescar manualmente.
-3. **Asignar repartidor / Iniciar entrega**: abre `DialogoAsignarRepartidor`, que permite elegir un pedido pendiente y un repartidor, e invoca `asignarRepartidor(nombre)`.
+3. **Asignar repartidor / Iniciar entrega**: abre `DialogoAsignarRepartidor`, que permite elegir un pedido pendiente y un repartidor, e invoca `asignarRepartidor(nombre)`. El estado del pedido cambia según las validaciones existentes (`validarEntrega()`): si la valida supera las condiciones (mochila térmica en Comida, peso ≤ 20 kg y embalaje validado en Encomienda, siempre válido en Express), el pedido pasa a `EN_REPARTO`; en caso contrario permanece `PENDIENTE` y la asignación es rechazada. Tras la asignación, la entrega se simula en segundo plano con un `SwingWorker`: cuando se cumple el tiempo definido por `calcularPausaEntregaMs()` (regla reutilizada del hilo `Repartidor`), el pedido pasa a `ENTREGADO`, se registra en el `ControladorDeEnvios` y la tabla de `VentanaListaPedidos` abierta se actualiza automáticamente.
 
 ## Requisitos
 

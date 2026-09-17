@@ -1,8 +1,6 @@
 package modelos.implementacion;
 
 public class Repartidor implements Runnable {
-    private static final long FACTOR_PAUSA_MS = 150L;
-
     private final String nombre;
     private final ZonaDeCarga zonaDeCarga;
     private final ControladorDeEnvios controladorDeEnvios;
@@ -42,8 +40,7 @@ public class Repartidor implements Runnable {
 
             try {
                 // Simulacion del tiempo de entrega (fuera de la sección crítica).
-                long pausa = Math.round(pedido.calcularTiempoEntrega()) * FACTOR_PAUSA_MS
-                        + (pedido.getIdPedido() % 5) * 130L;
+                long pausa = pedido.calcularPausaEntregaMs();
                 Thread.sleep(pausa);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

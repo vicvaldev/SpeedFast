@@ -1,6 +1,8 @@
 package modelos.implementacion;
 
 public abstract class Pedido {
+    private static final long FACTOR_PAUSA_MS = 150L;
+
     private int idPedido;
     private String direccionEntrega;
     private double distanciaKm;
@@ -75,13 +77,29 @@ public abstract class Pedido {
 
     public abstract double calcularTiempoEntrega();
 
+    public long calcularPausaEntregaMs() {
+        return Math.round(calcularTiempoEntrega()) * FACTOR_PAUSA_MS + (idPedido % 5) * 130L;
+    }
+
+    public abstract boolean validarEntrega();
+
     public void asignarRepartidor() {
         System.out.println("Asignando repartidor...");
-        System.out.println("→ Repartidor asignado automáticamente.");
+        if (validarEntrega()) {
+            setEstado(EstadoPedido.EN_REPARTO);
+            System.out.println("→ Repartidor asignado automáticamente. Entrega iniciada.");
+        } else {
+            System.out.println("→ No se pudo iniciar la entrega: el pedido no cumple las condiciones.");
+        }
     }
 
     public void asignarRepartidor(String nombreRepartidor) {
         System.out.println("Asignando repartidor...");
-        System.out.println("→ Pedido asignado a " + nombreRepartidor);
+        if (validarEntrega()) {
+            setEstado(EstadoPedido.EN_REPARTO);
+            System.out.println("→ Pedido asignado a " + nombreRepartidor + ". Entrega iniciada.");
+        } else {
+            System.out.println("→ No se pudo iniciar la entrega: el pedido no cumple las condiciones.");
+        }
     }
 }
