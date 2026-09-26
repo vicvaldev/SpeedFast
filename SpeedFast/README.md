@@ -1,6 +1,6 @@
 # SpeedFast
 
-Sistema de reparto de pedidos que gestiona de forma integral diferentes tipos de envíos, aplicando conceptos de **Programación Orientada a Objetos** (polimorfismo, abstracción e interfaces) y de **Programación Concurrente** (hilos y `ExecutorService`).
+Sistema de reparto de pedidos que gestiona de forma integral diferentes tipos de envíos, aplicando conceptos de **Programación Orientada a Objetos** (polimorfismo, abstracción e interfaces), de **Programación Concurrente** (hilos y `ExecutorService`) y de **persistencia en base de datos** (JDBC con el patrón DAO).
 
 ## Descripción del proyecto
 
@@ -8,7 +8,7 @@ SpeedFast administra pedidos diferenciados por tipo — **Comida**, **Encomienda
 
 La simulación concurrente implementa un patrón **productor-consumidor**: dos **generadores de pedidos** producen y cargan pedidos sobre una **zona de carga compartida** mientras varios **repartidores** (hilos consumidores) los retiran y entregan en paralelo, sincronizando el acceso a la sección crítica.
 
-Además, el sistema cuenta con una **interfaz gráfica (Swing)** que permite registrar pedidos, listarlos y asignar repartidor/iniciar entrega desde ventanas `JFrame`/`JDialog`, compartiendo los datos mediante una lista común administrada por la ventana principal.
+La **interfaz gráfica (Swing)** permite registrar pedidos y repartidores, listar los pedidos almacenados, asignar repartidor/iniciar entrega y consultar el historial de entregas. Los datos viven en **MySQL**: el paquete `persistencia` encapsula conexiones y operaciones, y el paquete `controladores` es el único puente hacia ellos, de modo que las vistas nunca construyen conexiones ni conocen DAOs por su cuenta.
 
 El sistema está desacoplado mediante interfaces que separan responsabilidades comunes a distintas clases.
 
@@ -16,16 +16,29 @@ El sistema está desacoplado mediante interfaces que separan responsabilidades c
 
 ```
 SpeedFast/
+├── lib/
+│   └── mysql-connector-j-26.7.0.jar  (driver JDBC, no versionado)
+├── sql/
+│   ├── migracion_detalle_pedido.sql  (columnas de detalle de las subclases)
+│   └── datos_iniciales.sql           (repartidores de ejemplo)
 ├── src/
-│   ├── aplicacion/
-│   │   └── Main.java                  (simulación concurrente / punto de entrada)
 │   ├── main/
-│   │   └── Main.java                  (punto de entrada de la interfaz gráfica)
+│   │   └── Main.java                  (composition root: construye los controladores y abre la GUI en el EDT)
+│   ├── controladores/
+│   │   └── ControladorDePedidos.java  (fachada de pedidos, repartidores y entregas; la inyectan las vistas)
+│   ├── persistencia/
+│   │   ├── ConexionDB.java            (conexión a MySQL y carga del driver)
+│   │   ├── Entrega.java               (DTO de la relación pedido-repartidor)
+│   │   ├── PedidoDAO.java             (guardar, listarTodos, listarPendientes, actualizarEstado)
+│   │   ├── RepartidorDAO.java         (guardar, listarTodos, existeNombre)
+│   │   └── EntregaDAO.java            (guardar, listarTodas, listarPorPedido)
 │   ├── vistas/
-│   │   ├── VentanaPrincipal.java      (JFrame principal: registrar, listar, asignar)
-│   │   ├── VentanaRegistroPedido.java (JFrame: formulario de registro de pedidos)
-│   │   ├── VentanaListaPedidos.java   (JFrame: JTable con DefaultTableModel)
-│   │   └── DialogoAsignarRepartidor.java (JDialog: asignar repartidor / iniciar entrega)
+│   │   ├── VentanaPrincipal.java          (JFrame principal: registrar, listar, historial, asignar)
+│   │   ├── VentanaRegistroPedido.java     (JFrame: formulario de registro de pedidos)
+│   │   ├── VentanaRegistroRepartidor.java (JFrame: formulario de registro de repartidores)
+│   │   ├── VentanaListaPedidos.java       (JFrame: JTable con DefaultTableModel)
+│   │   ├── VentanaHistorialEntregas.java  (JFrame: JTable del historial en memoria)
+│   │   └── DialogoAsignarRepartidor.java  (JDialog: asignar repartidor / iniciar entrega)
 │   └── modelos/
 │       ├── contratos/
 │       │   ├── Despachable.java       (interfaz: despachar)
@@ -39,54 +52,91 @@ SpeedFast/
 │           ├── PedidoExpress.java     (subclase Express)
 │           ├── ZonaDeCarga.java       (buffer acotado: synchronized + wait/notifyAll)
 │           ├── GeneradorDePedidos.java (productor, implementa Runnable)
+│           ├── RegistroEntrega.java   (DTO inmutable de una entrada del historial)
 │           ├── ControladorDeEnvios.java (historial con ReentrantLock y contador AtomicInteger)
-│           └── Repartidor.java        (hilo de reparto/consumidor, implementa Runnable)
+│           └── Repartidor.java        (hilo de reparto/consumidor + hidratación desde la BD)
 ```
 
 ## Conceptos aplicados
 
 - **Polimorfismo**: jerarquía con clase base `Pedido` y subclases `PedidoComida`, `PedidoEncomienda` y `PedidoExpress`. Método sobrescrito `asignarRepartidor()` en cada subclase y método sobrecargado `asignarRepartidor(String nombre)`.
 - **Abstracción**: clase abstracta `Pedido` con atributos (`idPedido`, `direccionEntrega`, `distanciaKm`), método implementado `mostrarResumen()` y método abstracto `calcularTiempoEntrega()` con lógica personalizada en cada subclase.
-- **Interfaces**: `Despachable`, `Cancelable` y `Rastreable`, implementadas por la clase `ControladorDeEnvios`, que también mantiene el historial de entregas en un `ArrayList`.
-- **Concurrencia y sincronización (productor-consumidor)**: la `ZonaDeCarga` es un buffer acotado bloqueante. Sus métodos `agregarPedido()` (productores) y `retirarPedido()` (consumidores) están declarados como `synchronized` y usan `wait()`/`notifyAll()`: los productores esperan cuando la zona está llena y los consumidores cuando está vacía; `cerrarProduccion()` cuenta productores activos y despierta a los consumidores solo cuando no habrá más pedidos. Dos hilos `GeneradorDePedidos` preparan pedidos en paralelo mientras los hilos `Repartidor` los retiran y entregan, simulando el tiempo con `Thread.sleep()` fuera de la sección crítica. `ControladorDeEnvios` protege su historial compartido con `ReentrantLock` y lleva el contador de entregas con `AtomicInteger`. En `Main`, 2 productores y 3 consumidores se ejecutan con `ExecutorService` (`newFixedThreadPool(5)`) y se espera su finalización con `shutdown()`/`awaitTermination()`.
-- **Interfaz gráfica (Swing)**: las ventanas del paquete `vistas` emplean `JFrame`, `JDialog`, `JTable` con `DefaultTableModel` (celdas no editables) y `JOptionPane` para validación y confirmación. `VentanaPrincipal` mantiene una lista común de `Pedido` que comparte con las demás ventanas, de modo que los pedidos registrados se reflejan en el listado y en la asignación de repartidor.
+- **Interfaces**: `Despachable`, `Cancelable` y `Rastreable`, implementadas por la clase `ControladorDeEnvios`, que también mantiene el historial de entregas en un `ArrayList` de `RegistroEntrega`.
+- **Arquitectura por capas e inyección de dependencias**: `Main` actúa como *composition root* y construye `ControladorDePedidos` y `ControladorDeEnvios`, que se inyectan por constructor en `VentanaPrincipal` y, desde ahí, en cada ventana hija. Ninguna vista importa el paquete `persistencia`: la colección de pedidos ya no vive en `VentanaPrincipal` sino detrás de `ControladorDePedidos`, que es el único punto que conoce los DAO. Cambiar el mecanismo de almacenamiento solo obliga a modificar ese controlador.
+- **Concurrencia y sincronización (productor-consumidor)**: la `ZonaDeCarga` es un buffer acotado bloqueante. Sus métodos `agregarPedido()` (productores) y `retirarPedido()` (consumidores) están declarados como `synchronized` y usan `wait()`/`notifyAll()`: los productores esperan cuando la zona está llena y los consumidores cuando está vacía; `cerrarProduccion()` cuenta productores activos y despierta a los consumidores solo cuando no habrá más pedidos. Dos hilos `GeneradorDePedidos` preparan pedidos en paralelo mientras los hilos `Repartidor` los retiran y entregan, simulando el tiempo con `Thread.sleep()` fuera de la sección crítica. `ControladorDeEnvios` protege su historial compartido con `ReentrantLock` y lleva el contador de entregas con `AtomicInteger`.
+- **Interfaz gráfica (Swing)**: las ventanas del paquete `vistas` emplean `JFrame`, `JDialog`, `JTable` con `DefaultTableModel` (celdas no editables) y `JOptionPane` para validación y confirmación. `VentanaPrincipal` conserva el patrón observador (`agregarActualizador`/`quitarActualizador`) para que las tablas abiertas se actualicen solas.
+- **Persistencia (patrón DAO)**: el paquete `persistencia` concentra todo el acceso a datos. `ConexionDB` es el único punto que conoce URL y credenciales; los DAO usan `PreparedStatement` y `ResultSet` siempre dentro de **try-with-resources**, de modo que la conexión y el statement se cierren aunque la operación falle. `EntregaDAO.guardar()` y `RepartidorDAO.guardar()` recuperan la clave generada con `Statement.RETURN_GENERATED_KEYS`.
+- **Mapeo objeto-relacional con polimorfismo**: la tabla `pedido` usa una columna discriminadora (`tipo`) más una columna nullable por atributo propio de cada subclase (`mochila_termica`, `peso`, `embalaje_validado`, `distancia_repartidor_cercano`). `PedidoDAO.crearPedido(ResultSet)` reconstruye la subclase correcta al leer, de modo que un pedido sobrevive intacto a un ciclo guardar → leer. Como esas columnas son nullable, un `NULL` se interpreta con el mismo valor que aplica el formulario, para que el round-trip no termine rechazando la entrega en `validarEntrega()`.
+- **Thread safety en la GUI**: **ninguna operación JDBC corre en el Event Dispatch Thread**. `Main` agenda la creación de la ventana con `SwingUtilities.invokeLater()`, y cada consulta o escritura se ejecuta dentro de un `SwingWorker` (`doInBackground`), pintando el resultado solo en `done()`. Los `JOptionPane` de confirmación y error también se invocan desde `done()`.
 
 ## Interfaz gráfica
 
-La aplicación se inicia desde `main.Main`, que ejecuta `new VentanaPrincipal()`. La ventana principal ofrece tres funcionalidades:
+La aplicación se inicia desde `main.Main`, que construye los controladores y agenda la apertura de `VentanaPrincipal` con `SwingUtilities.invokeLater()`, de modo que la interfaz se crea explícitamente en el Event Dispatch Thread. La comprobación de la base de datos corre en un `SwingWorker`: si MySQL no responde, el motivo se muestra en un `JOptionPane` en vez de dejar ventanas vacías sin explicación. La ventana principal ofrece cinco funcionalidades:
 
-1. **Registrar pedido**: abre `VentanaRegistroPedido`, un formulario con campos ID, Dirección y un `JComboBox` de tipo (Comida, Encomienda, Express). El botón **Guardar** valida los campos (ID numérico positivo y sin duplicados, dirección no vacía), crea la subclase de `Pedido` correspondiente, la agrega a la lista común y confirma con `JOptionPane`.
-2. **Listar pedidos**: abre `VentanaListaPedidos`, una tabla `JTable` (ID, Tipo, Dirección, Estado) alimentada por un `DefaultTableModel` que se puede refrescar manualmente.
-3. **Asignar repartidor / Iniciar entrega**: abre `DialogoAsignarRepartidor`, que permite elegir un pedido pendiente y un repartidor, e invoca `asignarRepartidor(nombre)`. El estado del pedido cambia según las validaciones existentes (`validarEntrega()`): si la valida supera las condiciones (mochila térmica en Comida, peso ≤ 20 kg y embalaje validado en Encomienda, siempre válido en Express), el pedido pasa a `EN_REPARTO`; en caso contrario permanece `PENDIENTE` y la asignación es rechazada. Tras la asignación, la entrega se simula en segundo plano con un `SwingWorker`: cuando se cumple el tiempo definido por `calcularPausaEntregaMs()` (regla reutilizada del hilo `Repartidor`), el pedido pasa a `ENTREGADO`, se registra en el `ControladorDeEnvios` y la tabla de `VentanaListaPedidos` abierta se actualiza automáticamente.
+1. **Registrar pedido**: abre `VentanaRegistroPedido`, un formulario con campos ID, Dirección y un `JComboBox` de tipo (Comida, Encomienda, Express). El botón **Guardar** valida los campos en el EDT (ID numérico positivo, dirección no vacía) y luego delega la validación de duplicados y el `INSERT` a un `SwingWorker`, que llama a `ControladorDePedidos.existeId()` y `guardar()`. El botón se deshabilita mientras la operación corre y se rehabilita en `done()`, donde se muestra la confirmación o el error. Al guardar, el formulario se limpia y se notifica a las tablas abiertas.
+2. **Registrar repartidor**: abre `VentanaRegistroRepartidor`, que valida que el nombre no esté vacío y delega la comprobación de repetidos (`existeNombreRepartidor()`) y el `INSERT` (`guardarRepartidor()`) al mismo patrón de `SwingWorker`.
+3. **Listar pedidos**: abre `VentanaListaPedidos`, una tabla `JTable` (ID, Tipo, Dirección, Estado) alimentada por `ControladorDePedidos.listarTodos()` dentro de un `SwingWorker`. También se refresca sola cuando otra ventana notifica un cambio.
+4. **Historial de entregas**: abre `VentanaHistorialEntregas`, una `JTable` de solo lectura (#, Pedido, Tipo, Dirección, Repartidor, Tiempo, Estado, Fecha y hora) alimentada por `ControladorDeEnvios.obtenerHistorial()`. A diferencia del resto de ventanas, **no consulta la base de datos**: lee una copia inmodificable del historial en memoria, por lo que puede pintarse directamente en el EDT. Cada entrada es un `RegistroEntrega`, un DTO inmutable que captura el nombre del repartidor y el instante de la entrega en el momento de registrarla. Se refresca sola cuando `DialogoAsignarRepartidor` completa una entrega.
+5. **Asignar repartidor / Iniciar entrega**: abre `DialogoAsignarRepartidor`, que carga los pedidos pendientes (`listarPendientes()`) y los repartidores (`listarRepartidores()`) en un único `SwingWorker` de arranque. Se elige un pedido y un repartidor, y se invoca `asignarRepartidor(nombre)`. El estado del pedido cambia según las validaciones existentes (`validarEntrega()`): si supera las condiciones (mochila térmica en Comida, peso ≤ 20 kg y embalaje validado en Encomienda, siempre válido en Express), la asignación se acepta; en caso contrario el pedido permanece `PENDIENTE` y se muestra **Asignación rechazada**. Tras la aceptación, la entrega se simula en segundo plano con un `SwingWorker` que hace todo el acceso a datos fuera del EDT: persiste `EN_REPARTO`, espera el tiempo definido por `calcularPausaEntregaMs()`, persiste `ENTREGADO` e inserta la fila en `entrega` con `registrarEntregaEnBD()`. En `done()` el pedido se marca como entregado en memoria, se registra en el `ControladorDeEnvios` junto con el nombre del repartidor, se notifica a las tablas abiertas y el diálogo se cierra.
+
+## Base de datos
+
+MySQL corre en Docker con el puerto 3306 publicado en el host.
+
+```bash
+docker run -d --name speedfast-mysql -e MYSQL_ROOT_PASSWORD=desarrollo \
+  -e MYSQL_DATABASE=speedfastdb -p 3306:3306 mysql:latest
+```
+
+### Esquema
+
+| Tabla | Columnas |
+|---|---|
+| `pedido` | `id` (AI, PK), `direccion`, `tipo`, `estado`, `distancia_km`, `mochila_termica`, `peso`, `embalaje_validado`, `distancia_repartidor_cercano` |
+| `repartidor` | `id` (AI, PK), `nombre` |
+| `entrega` | `id` (AI, PK), `id_pedido` (FK), `id_repartidor` (FK), `fecha` (DATE), `hora` (TIME) |
+
+Los scripts de `sql/` son idempotentes en cuanto a la carga de datos y se aplican dentro del contenedor:
+
+```bash
+Get-Content -Raw -Encoding UTF8 sql/migracion_detalle_pedido.sql | docker exec -i speedfast-mysql mysql -u root -pdesarrollo
+Get-Content -Raw -Encoding UTF8 sql/datos_iniciales.sql          | docker exec -i speedfast-mysql mysql -u root -pdesarrollo
+```
+
+> **Nota**: la FK `entrega_ibfk_1` no declara `ON DELETE CASCADE`, por lo que eliminar un pedido que ya tenga entregas registradas viola la restricción. Si necesitas borrar pedidos, primero borra sus entregas o agrega la cascada.
+
+### Credenciales
+
+Viven hardcodeadas en `persistencia/ConexionDB.java` (`speedfastdb`, usuario `root`). La URL incluye tres parámetros que no son opcionales:
+
+```java
+jdbc:mysql://localhost:3306/speedfastdb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Santiago
+```
+
+`allowPublicKeyRetrieval=true` es **imprescindible**: el usuario `root` usa `caching_sha2_password` y la conexión es TCP sin SSL, así que sin este parámetro el driver lanza `Public Key Retrieval is not allowed`.
 
 ## Requisitos
 
 - JDK 8 o superior (el proyecto compila con Java 26).
+- Docker, con el contenedor de MySQL en ejecución.
+- **MySQL Connector/J 26.7.0** en `lib/mysql-connector-j-26.7.0.jar` (la carpeta `lib/` está en `.gitignore`; descárgala desde Maven Central si no está).
 
 ## Cómo compilar y ejecutar
 
 1. Clona o abre el proyecto en tu máquina.
-2. Desde la raíz del proyecto (`SpeedFast/`), compila las clases:
+2. Desde la raíz del proyecto (`SpeedFast/`), compila las clases incluyendo el driver en el classpath:
 
    ```bash
-   javac -encoding UTF-8 -d out -sourcepath src $(Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
+   javac -encoding UTF-8 -cp "lib/mysql-connector-j-26.7.0.jar" -d out -sourcepath src $(Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
    ```
 
-3. Ejecuta el programa:
+3. Ejecuta la interfaz gráfica:
 
-   - Simulación de consola:
-     ```bash
-     java -cp out aplicacion.Main
-     ```
-
-   - Interfaz gráfica:
-     ```bash
-     java -cp out main.Main
-     ```
+   ```bash
+   java -cp "out;lib/mysql-connector-j-26.7.0.jar" main.Main
+   ```
 
 ### Desde IntelliJ IDEA
 
-1. Abre el proyecto con IntelliJ IDEA.
-2. Ejecuta la clase deseada con el botón **Run** o `Shift+F10`:
-   - `aplicacion.Main` para la simulación de consola.
-   - `main.Main` para la interfaz gráfica.
+1. Abre el proyecto con IntelliJ IDEA. El driver de `lib/` ya está declarado en `SpeedFast.iml`.
+2. Ejecuta `main.Main` con el botón **Run** o `Shift+F10`.

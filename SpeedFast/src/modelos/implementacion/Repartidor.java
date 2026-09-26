@@ -1,6 +1,7 @@
 package modelos.implementacion;
 
 public class Repartidor implements Runnable {
+    private int idRepartidor;
     private final String nombre;
     private final ZonaDeCarga zonaDeCarga;
     private final ControladorDeEnvios controladorDeEnvios;
@@ -11,7 +12,27 @@ public class Repartidor implements Runnable {
         this.controladorDeEnvios = controladorDeEnvios;
     }
 
+    public Repartidor(int idRepartidor, String nombre) {
+        this.idRepartidor = idRepartidor;
+        this.nombre = nombre;
+        this.zonaDeCarga = null;
+        this.controladorDeEnvios = null;
+    }
+
+    public int getIdRepartidor() {
+        return idRepartidor;
+    }
+
+    public void setIdRepartidor(int idRepartidor) {
+        this.idRepartidor = idRepartidor;
+    }
+
     public String getNombre() {
+        return nombre;
+    }
+
+    @Override
+    public String toString() {
         return nombre;
     }
 
@@ -49,7 +70,7 @@ public class Repartidor implements Runnable {
             }
 
             pedido.setEstado(EstadoPedido.ENTREGADO);
-            int nroEntrega = controladorDeEnvios.registrarEntrega(pedido);
+            int nroEntrega = controladorDeEnvios.registrarEntrega(pedido, nombre);
             System.out.println("[Repartidor - " + nombre + "] Estado: " + pedido.getEstado()
                     + " (pedido #" + pedido.getIdPedido() + " entregado). Entrega registrada No. " + nroEntrega);
         }

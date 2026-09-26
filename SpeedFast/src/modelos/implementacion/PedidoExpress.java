@@ -4,7 +4,7 @@ public class PedidoExpress extends Pedido {
     private double distanciaRepartidorMasCercano;
 
     public PedidoExpress(int idPedido, String direccionEntrega, double distanciaKm, double distanciaRepartidorMasCercano) {
-        super(idPedido, direccionEntrega, distanciaKm, "Compra Express");
+        super(idPedido, direccionEntrega, distanciaKm, "Express");
         this.distanciaRepartidorMasCercano = distanciaRepartidorMasCercano;
     }
 
