@@ -1,12 +1,12 @@
 # SpeedFast
 
-Sistema de reparto de pedidos que gestiona de forma integral diferentes tipos de envíos, aplicando conceptos de **Programación Orientada a Objetos** (polimorfismo, abstracción e interfaces), de **Programación Concurrente** (hilos y `ExecutorService`) y de **persistencia en base de datos** (JDBC con el patrón DAO).
+Sistema de reparto de pedidos que gestiona de forma integral diferentes tipos de envíos, aplicando conceptos de **Programación Orientada a Objetos** (polimorfismo, abstracción e interfaces), de **Programación Concurrente** (`synchronized` con `wait`/`notifyAll`, `ReentrantLock`, `AtomicInteger` y `SwingWorker`) y de **persistencia en base de datos** (JDBC con el patrón DAO).
 
 ## Descripción del proyecto
 
-SpeedFast administra pedidos diferenciados por tipo — **Comida**, **Encomienda** y **Express** — cada uno con lógica específica de asignación de repartidor y cálculo del tiempo de entrega. Además ofrece interacciones funcionales como reservar, despachar, cancelar y consultar el historial de entregas.
+SpeedFast administra pedidos diferenciados por tipo — **Comida**, **Encomienda** y **Express** — cada uno con lógica específica de asignación de repartidor y cálculo del tiempo de entrega. Además ofrece interacciones funcionales como reservar, despachar, cancelar y consultar el historial de entregas, que se muestra en una tabla dentro de la propia interfaz.
 
-La simulación concurrente implementa un patrón **productor-consumidor**: dos **generadores de pedidos** producen y cargan pedidos sobre una **zona de carga compartida** mientras varios **repartidores** (hilos consumidores) los retiran y entregan en paralelo, sincronizando el acceso a la sección crítica.
+El paquete de modelos incluye además una simulación concurrente con patrón **productor-consumidor**: dos **generadores de pedidos** cargan pedidos sobre una **zona de carga compartida** acotada mientras varios **repartidores** (consumidores) los retiran y entregan en paralelo, sincronizando el acceso a la sección crítica. Esa simulación está disponible como biblioteca (`ZonaDeCarga`, `GeneradorDePedidos`, `Repartidor.run()`), pero **no está conectada al flujo de la interfaz**, que ejecuta la entrega mediante un `SwingWorker`.
 
 La **interfaz gráfica (Swing)** permite registrar pedidos y repartidores, listar los pedidos almacenados, asignar repartidor/iniciar entrega y consultar el historial de entregas. Los datos viven en **MySQL**: el paquete `persistencia` encapsula conexiones y operaciones, y el paquete `controladores` es el único puente hacia ellos, de modo que las vistas nunca construyen conexiones ni conocen DAOs por su cuenta.
 
@@ -63,7 +63,7 @@ SpeedFast/
 - **Abstracción**: clase abstracta `Pedido` con atributos (`idPedido`, `direccionEntrega`, `distanciaKm`), método implementado `mostrarResumen()` y método abstracto `calcularTiempoEntrega()` con lógica personalizada en cada subclase.
 - **Interfaces**: `Despachable`, `Cancelable` y `Rastreable`, implementadas por la clase `ControladorDeEnvios`, que también mantiene el historial de entregas en un `ArrayList` de `RegistroEntrega`.
 - **Arquitectura por capas e inyección de dependencias**: `Main` actúa como *composition root* y construye `ControladorDePedidos` y `ControladorDeEnvios`, que se inyectan por constructor en `VentanaPrincipal` y, desde ahí, en cada ventana hija. Ninguna vista importa el paquete `persistencia`: la colección de pedidos ya no vive en `VentanaPrincipal` sino detrás de `ControladorDePedidos`, que es el único punto que conoce los DAO. Cambiar el mecanismo de almacenamiento solo obliga a modificar ese controlador.
-- **Concurrencia y sincronización (productor-consumidor)**: la `ZonaDeCarga` es un buffer acotado bloqueante. Sus métodos `agregarPedido()` (productores) y `retirarPedido()` (consumidores) están declarados como `synchronized` y usan `wait()`/`notifyAll()`: los productores esperan cuando la zona está llena y los consumidores cuando está vacía; `cerrarProduccion()` cuenta productores activos y despierta a los consumidores solo cuando no habrá más pedidos. Dos hilos `GeneradorDePedidos` preparan pedidos en paralelo mientras los hilos `Repartidor` los retiran y entregan, simulando el tiempo con `Thread.sleep()` fuera de la sección crítica. `ControladorDeEnvios` protege su historial compartido con `ReentrantLock` y lleva el contador de entregas con `AtomicInteger`.
+- **Concurrencia y sincronización (productor-consumidor)**: la `ZonaDeCarga` es un buffer acotado bloqueante. Sus métodos `agregarPedido()` (productores) y `retirarPedido()` (consumidores) están declarados como `synchronized` y usan `wait()`/`notifyAll()`: los productores esperan cuando la zona está llena y los consumidores cuando está vacía; `cerrarProduccion()` cuenta productores activos y despierta a los consumidores solo cuando no habrá más pedidos. Dos instancias de `GeneradorDePedidos` preparan pedidos en paralelo mientras las instancias de `Repartidor` los retiran y entregan, simulando el tiempo con `Thread.sleep()` fuera de la sección crítica. `ControladorDeEnvios` protege su historial compartido con `ReentrantLock` y lleva el contador de entregas con `AtomicInteger`. El alcance de esta simulación es el del paquete de modelos: la interfaz no la invoca, y su propio reparto se resuelve con `SwingWorker` (ver *Thread safety en la GUI*).
 - **Interfaz gráfica (Swing)**: las ventanas del paquete `vistas` emplean `JFrame`, `JDialog`, `JTable` con `DefaultTableModel` (celdas no editables) y `JOptionPane` para validación y confirmación. `VentanaPrincipal` conserva el patrón observador (`agregarActualizador`/`quitarActualizador`) para que las tablas abiertas se actualicen solas.
 - **Persistencia (patrón DAO)**: el paquete `persistencia` concentra todo el acceso a datos. `ConexionDB` es el único punto que conoce URL y credenciales; los DAO usan `PreparedStatement` y `ResultSet` siempre dentro de **try-with-resources**, de modo que la conexión y el statement se cierren aunque la operación falle. `EntregaDAO.guardar()` y `RepartidorDAO.guardar()` recuperan la clave generada con `Statement.RETURN_GENERATED_KEYS`.
 - **Mapeo objeto-relacional con polimorfismo**: la tabla `pedido` usa una columna discriminadora (`tipo`) más una columna nullable por atributo propio de cada subclase (`mochila_termica`, `peso`, `embalaje_validado`, `distancia_repartidor_cercano`). `PedidoDAO.crearPedido(ResultSet)` reconstruye la subclase correcta al leer, de modo que un pedido sobrevive intacto a un ciclo guardar → leer. Como esas columnas son nullable, un `NULL` se interpreta con el mismo valor que aplica el formulario, para que el round-trip no termine rechazando la entrega en `validarEntrega()`.
@@ -98,7 +98,7 @@ docker run -d --name speedfast-mysql -e MYSQL_ROOT_PASSWORD=desarrollo \
 
 Los scripts de `sql/` son idempotentes en cuanto a la carga de datos y se aplican dentro del contenedor:
 
-```bash
+```powershell
 Get-Content -Raw -Encoding UTF8 sql/migracion_detalle_pedido.sql | docker exec -i speedfast-mysql mysql -u root -pdesarrollo
 Get-Content -Raw -Encoding UTF8 sql/datos_iniciales.sql          | docker exec -i speedfast-mysql mysql -u root -pdesarrollo
 ```
@@ -126,17 +126,19 @@ jdbc:mysql://localhost:3306/speedfastdb?allowPublicKeyRetrieval=true&useSSL=fals
 1. Clona o abre el proyecto en tu máquina.
 2. Desde la raíz del proyecto (`SpeedFast/`), compila las clases incluyendo el driver en el classpath:
 
-   ```bash
-   javac -encoding UTF-8 -cp "lib/mysql-connector-j-26.7.0.jar" -d out -sourcepath src $(Get-ChildItem src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
+   ```powershell
+   javac -encoding UTF-8 -cp "lib/mysql-connector-j-26.7.0.jar" -d out -sourcepath src (Get-ChildItem src -Recurse -Filter *.java).FullName
    ```
 
 3. Ejecuta la interfaz gráfica:
 
-   ```bash
+   ```powershell
    java -cp "out;lib/mysql-connector-j-26.7.0.jar" main.Main
    ```
 
+> En Windows el separador del classpath es `;`. En Linux o macOS usa `:` y enclose las rutas del driver entre comillas.
+
 ### Desde IntelliJ IDEA
 
-1. Abre el proyecto con IntelliJ IDEA. El driver de `lib/` ya está declarado en `SpeedFast.iml`.
+1. Abre el proyecto con IntelliJ IDEA. El driver de `lib/` ya está declarado en `SpeedFast.iml`, y `src/` es la única raíz de fuentes.
 2. Ejecuta `main.Main` con el botón **Run** o `Shift+F10`.
