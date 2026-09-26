@@ -15,7 +15,7 @@ public class ConexionDB {
     // allowPublicKeyRetrieval=true es obligatorio porque el usuario root usa
     // caching_sha2_password y la conexion se hace por TCP sin SSL; sin este
     // parametro el driver lanza "Public Key Retrieval is not allowed".
-    private static final String URL = "jdbc:mysql://localhost:3306/speedfastdb"
+    private static final String URL = "jdbc:mysql://localhost:3306/speedfast_db"
             + "?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Santiago";
     private static final String USER = "root";
     private static final String PASSWORD = "desarrollo";
