@@ -119,7 +119,7 @@ public class VentanaPrincipal extends JFrame {
                     return;
                 }
                 JOptionPane.showMessageDialog(VentanaPrincipal.this,
-                        "No se pudo conectar con la base de datos speedfastdb.\n\n"
+                        "No se pudo conectar con la base de datos speedfast_db.\n\n"
                                 + "Verifique que el contenedor MySQL esté detenido o revise las "
                                 + "credenciales en persistencia/ConexionDB.java.",
                         "Error de conexión", JOptionPane.ERROR_MESSAGE);

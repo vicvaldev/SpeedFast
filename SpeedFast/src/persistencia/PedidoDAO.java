@@ -87,10 +87,26 @@ public class PedidoDAO {
         return pedidos;
     }
 
+    /**
+     * Actualiza el estado del pedido abriendo su propia conexion, ya en
+     * autocommit.
+     */
     public void actualizarEstado(int idPedido, EstadoPedido estado) throws SQLException {
+        try (Connection conexion = ConexionDB.conectar()) {
+            actualizarEstado(conexion, idPedido, estado);
+        }
+    }
+
+    /**
+     * Actualiza el estado del pedido sobre una conexion entregada por el
+     * llamador. Permite que el UPDATE participe de una transaccion mayor
+     * (ver {@code ControladorDePedidos.registrarEntregaCompleta}): al no
+     * cerrar la conexion ni cambiar su autocommit, el commit y el rollback
+     * quedan en manos de quien la abrio.
+     */
+    public void actualizarEstado(Connection conexion, int idPedido, EstadoPedido estado) throws SQLException {
         String sql = "UPDATE pedido SET estado = ? WHERE id = ?";
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setString(1, estado.name());
             ps.setInt(2, idPedido);
             ps.executeUpdate();

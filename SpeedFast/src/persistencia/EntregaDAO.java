@@ -26,11 +26,27 @@ public class EntregaDAO {
     }
 
     /**
+     * Inserta la entrega abriendo su propia conexion, ya en autocommit.
+     *
      * @return el id generado para la entrega recien insertada
      */
     public int guardar(Entrega entrega) throws SQLException {
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement ps = conexion.prepareStatement(SQL_INSERTAR, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conexion = ConexionDB.conectar()) {
+            return guardar(conexion, entrega);
+        }
+    }
+
+    /**
+     * Inserta la entrega sobre una conexion entregada por el llamador, de
+     * modo que el INSERT pueda formar parte de una transaccion mayor (ver
+     * {@code ControladorDePedidos.registrarEntregaCompleta}). La conexion no
+     * se cierra ni se le cambia el autocommit: el commit y el rollback
+     * quedan en manos de quien la abrio.
+     *
+     * @return el id generado para la entrega recien insertada
+     */
+    public int guardar(Connection conexion, Entrega entrega) throws SQLException {
+        try (PreparedStatement ps = conexion.prepareStatement(SQL_INSERTAR, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setInt(1, entrega.getIdPedido());
             ps.setInt(2, entrega.getIdRepartidor());

@@ -159,8 +159,10 @@ public class DialogoAsignarRepartidor extends JDialog {
                 // de entrega.
                 controladorPedidos.actualizarEstado(pedido.getIdPedido(), EstadoPedido.EN_REPARTO);
                 Thread.sleep(pedido.calcularPausaEntregaMs());
-                controladorPedidos.actualizarEstado(pedido.getIdPedido(), EstadoPedido.ENTREGADO);
-                controladorPedidos.registrarEntregaEnBD(pedido.getIdPedido(), idRepartidor);
+                // El cierre (ENTREGADO) y el INSERT en `entrega` viajan en una
+                // sola transaccion: si el registro de la entrega falla, el
+                // estado tampoco queda confirmado.
+                controladorPedidos.registrarEntregaCompleta(pedido.getIdPedido(), idRepartidor);
                 return null;
             }
 
@@ -172,8 +174,8 @@ public class DialogoAsignarRepartidor extends JDialog {
                     Thread.currentThread().interrupt();
                     return;
                 } catch (Exception e) {
-                    mostrarError("Ocurrió un problema al registrar la entrega.\n"
-                            + obtenerDetalle(e.getCause()));
+                    mostrarError("No se pudo completar la entrega: el cambio de estado y el "
+                            + "registro quedaron deshechos.\n" + obtenerDetalle(e.getCause()));
                     return;
                 }
                 pedido.setEstado(EstadoPedido.ENTREGADO);
