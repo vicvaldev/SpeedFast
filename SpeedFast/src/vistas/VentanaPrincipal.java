@@ -27,7 +27,7 @@ public class VentanaPrincipal extends JFrame {
 
         setTitle("Sistema SpeedFast");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(440, 380);
+        setSize(460, 460);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
@@ -36,24 +36,23 @@ public class VentanaPrincipal extends JFrame {
         panelTitulo.add(new JLabel("Administración de pedidos SpeedFast"));
         add(panelTitulo, BorderLayout.NORTH);
 
-        JPanel panelBotones = new JPanel(new GridLayout(6, 1, 8, 8));
+        JPanel panelBotones = new JPanel(new GridLayout(5, 1, 8, 8));
         panelBotones.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
 
-        JButton btnRegistrar = new JButton("Registrar pedido");
-        btnRegistrar.addActionListener(e ->
-                new VentanaRegistroPedido(this, controladorPedidos, this::refrescarPedidos).setVisible(true));
-
-        JButton btnRegistrarRepartidor = new JButton("Registrar repartidor");
-        btnRegistrarRepartidor.addActionListener(e ->
-                new VentanaRegistroRepartidor(this, controladorPedidos, this::refrescarPedidos).setVisible(true));
-
-        JButton btnListar = new JButton("Listar pedidos");
-        btnListar.addActionListener(e ->
+        // Cada gestion concentra su propio alta: el boton abre una unica ventana
+        // que lista, registra, edita y elimina, de modo que no hay ventanas de
+        // registro separadas.
+        JButton btnListarPedidos = new JButton("Gestionar pedidos");
+        btnListarPedidos.addActionListener(e ->
                 new VentanaListaPedidos(this, controladorPedidos).setVisible(true));
 
-        JButton btnHistorial = new JButton("Historial de entregas");
-        btnHistorial.addActionListener(e ->
-                new VentanaHistorialEntregas(this, controladorEnvios).setVisible(true));
+        JButton btnListarRepartidores = new JButton("Gestionar repartidores");
+        btnListarRepartidores.addActionListener(e ->
+                new VentanaListaRepartidores(this, controladorPedidos).setVisible(true));
+
+        JButton btnListarEntregas = new JButton("Gestionar entregas");
+        btnListarEntregas.addActionListener(e ->
+                new VentanaListaEntregas(this, controladorPedidos).setVisible(true));
 
         JButton btnAsignar = new JButton("Asignar repartidor / Iniciar entrega");
         btnAsignar.addActionListener(e -> new DialogoAsignarRepartidor(
@@ -62,10 +61,9 @@ public class VentanaPrincipal extends JFrame {
         JButton btnSalir = new JButton("Salir");
         btnSalir.addActionListener(e -> dispose());
 
-        panelBotones.add(btnRegistrar);
-        panelBotones.add(btnRegistrarRepartidor);
-        panelBotones.add(btnListar);
-        panelBotones.add(btnHistorial);
+        panelBotones.add(btnListarPedidos);
+        panelBotones.add(btnListarRepartidores);
+        panelBotones.add(btnListarEntregas);
         panelBotones.add(btnAsignar);
         panelBotones.add(btnSalir);
 

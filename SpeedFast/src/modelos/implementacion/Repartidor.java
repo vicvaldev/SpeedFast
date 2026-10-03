@@ -2,7 +2,7 @@ package modelos.implementacion;
 
 public class Repartidor implements Runnable {
     private int idRepartidor;
-    private final String nombre;
+    private String nombre;
     private final ZonaDeCarga zonaDeCarga;
     private final ControladorDeEnvios controladorDeEnvios;
 
@@ -29,6 +29,10 @@ public class Repartidor implements Runnable {
 
     public String getNombre() {
         return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
     }
 
     @Override

@@ -90,7 +90,7 @@ public class DialogoAsignarRepartidor extends JDialog {
             protected DatosCarga doInBackground() throws SQLException {
                 // Las dos consultas JDBC van en doInBackground: hacerlas en
                 // done() congelaria la ventana mientras MySQL responde.
-                return new DatosCarga(controladorPedidos.listarPendientes(),
+                return new DatosCarga(controladorPedidos.listarPedidosPendientes(),
                         controladorPedidos.listarRepartidores());
             }
 
@@ -157,7 +157,7 @@ public class DialogoAsignarRepartidor extends JDialog {
                 // Todo el acceso a la base de datos ocurre aqui, fuera del
                 // Event Dispatch Thread, junto con la simulacion del tiempo
                 // de entrega.
-                controladorPedidos.actualizarEstado(pedido.getIdPedido(), EstadoPedido.EN_REPARTO);
+                controladorPedidos.cambiarEstadoPedido(pedido.getIdPedido(), EstadoPedido.EN_REPARTO);
                 Thread.sleep(pedido.calcularPausaEntregaMs());
                 // El cierre (ENTREGADO) y el INSERT en `entrega` viajan en una
                 // sola transaccion: si el registro de la entrega falla, el

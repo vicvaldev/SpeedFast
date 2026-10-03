@@ -1,10 +1,11 @@
 package controladores;
 
+import modelos.implementacion.DetalleEntrega;
+import modelos.implementacion.Entrega;
 import modelos.implementacion.EstadoPedido;
 import modelos.implementacion.Pedido;
 import modelos.implementacion.Repartidor;
 import persistencia.ConexionDB;
-import persistencia.Entrega;
 import persistencia.EntregaDAO;
 import persistencia.PedidoDAO;
 import persistencia.RepartidorDAO;
@@ -14,14 +15,18 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
- * Controlador especifico que concentra el acceso a los datos de pedidos,
- * repartidores y entregas.
+ * Fachada de pedidos, repartidores y entregas.
  *
  * <p>Es el unico punto por el que la capa de vistas obtiene informacion
  * persistida. Las ventanas reciben esta clase por constructor y nunca
  * construyen un DAO ni conocen el paquete {@code persistencia}, de modo que
  * cambiar el mecanismo de almacenamiento (MySQL, archivos, memoria) solo
  * obliga a modificar este controlador.</p>
+ *
+ * <p>Aqui viven las cuatro operaciones del CRUD para las tres entidades. Los
+ * DAO usan el nombre de la convencion (create / readAll / update / delete)
+ * porque es la que exige la especificacion; esta fachada las expone en espanol
+ * para que las vistas lean como el resto de la aplicacion.</p>
  *
  * <p>Los metodos propagan {@link SQLException} para que cada vista conserve
  * sus propios mensajes de error, y todos son bloqueantes: el llamador
@@ -38,40 +43,130 @@ public class ControladorDePedidos {
     private final RepartidorDAO repartidorDAO = new RepartidorDAO();
     private final EntregaDAO entregaDAO = new EntregaDAO();
 
-    public List<Pedido> listarTodos() throws SQLException {
-        return pedidoDAO.listarTodos();
+    // ---------------------------------------------------------------
+    // Pedidos
+    // ---------------------------------------------------------------
+
+    /**
+     * @return el pedido guardado, con el id que le asigno la base de datos
+     */
+    public Pedido crearPedido(Pedido pedido) throws SQLException {
+        return pedidoDAO.create(pedido);
     }
 
-    public List<Pedido> listarPendientes() throws SQLException {
-        return pedidoDAO.listarPendientes();
+    public List<Pedido> listarPedidos() throws SQLException {
+        return pedidoDAO.readAll();
     }
 
-    public void guardar(Pedido pedido) throws SQLException {
-        pedidoDAO.guardar(pedido);
+    public List<Pedido> listarPedidosPendientes() throws SQLException {
+        return pedidoDAO.readPendientes();
     }
 
-    public void actualizarEstado(int idPedido, EstadoPedido estado) throws SQLException {
-        pedidoDAO.actualizarEstado(idPedido, estado);
+    /**
+     * @param tipo   tipo a filtrar, o {@code null} para no filtrar por tipo
+     * @param estado estado a filtrar, o {@code null} para no filtrar por estado
+     */
+    public List<Pedido> listarPedidosFiltrados(String tipo, EstadoPedido estado) throws SQLException {
+        return pedidoDAO.readFiltrado(tipo, estado);
     }
 
-    public boolean existeId(int idPedido) throws SQLException {
-        return pedidoDAO.existeId(idPedido);
+    public Pedido obtenerPedido(int idPedido) throws SQLException {
+        return pedidoDAO.readPorId(idPedido);
+    }
+
+    public void actualizarPedido(Pedido pedido) throws SQLException {
+        pedidoDAO.update(pedido);
+    }
+
+    /**
+     * Elimina el pedido. Las entregas registradas se borran en cascada por la
+     * FK {@code fk_entrega_pedido}.
+     */
+    public void eliminarPedido(int idPedido) throws SQLException {
+        pedidoDAO.delete(idPedido);
+    }
+
+    public void cambiarEstadoPedido(int idPedido, EstadoPedido estado) throws SQLException {
+        pedidoDAO.update(idPedido, estado);
+    }
+
+    public boolean existePedido(int idPedido) throws SQLException {
+        return pedidoDAO.existe(idPedido);
+    }
+
+    /** @return cuantas entregas tiene registradas el pedido */
+    public int cantidadEntregasDePedido(int idPedido) throws SQLException {
+        return entregaDAO.contarPorPedido(idPedido);
+    }
+
+    // ---------------------------------------------------------------
+    // Repartidores
+    // ---------------------------------------------------------------
+
+    /**
+     * @return el repartidor guardado, con el id que le asigno la base de datos
+     */
+    public Repartidor crearRepartidor(Repartidor repartidor) throws SQLException {
+        return repartidorDAO.create(repartidor);
     }
 
     public List<Repartidor> listarRepartidores() throws SQLException {
-        return repartidorDAO.listarTodos();
+        return repartidorDAO.readAll();
     }
 
-    public void guardarRepartidor(Repartidor repartidor) throws SQLException {
-        repartidorDAO.guardar(repartidor);
+    public void actualizarRepartidor(Repartidor repartidor) throws SQLException {
+        repartidorDAO.update(repartidor);
     }
 
-    public boolean existeNombreRepartidor(String nombre) throws SQLException {
-        return repartidorDAO.existeNombre(nombre);
+    /**
+     * Elimina el repartidor. Sus entregas se borran en cascada por la FK
+     * {@code fk_entrega_repartidor}.
+     */
+    public void eliminarRepartidor(int idRepartidor) throws SQLException {
+        repartidorDAO.delete(idRepartidor);
     }
 
-    public void registrarEntregaEnBD(int idPedido, int idRepartidor) throws SQLException {
-        entregaDAO.guardar(new Entrega(idPedido, idRepartidor));
+    /**
+     * @param idExcluido repartidor a ignorar al buscar duplicados; 0 en el alta
+     */
+    public boolean existeNombreRepartidor(String nombre, int idExcluido) throws SQLException {
+        return repartidorDAO.existeNombre(nombre, idExcluido);
+    }
+
+    /** @return cuantas entregas tiene registradas el repartidor */
+    public int cantidadEntregasDeRepartidor(int idRepartidor) throws SQLException {
+        return entregaDAO.contarPorRepartidor(idRepartidor);
+    }
+
+    // ---------------------------------------------------------------
+    // Entregas
+    // ---------------------------------------------------------------
+
+    /**
+     * @return el id generado para la entrega recien insertada
+     */
+    public int crearEntrega(Entrega entrega) throws SQLException {
+        return entregaDAO.create(entrega);
+    }
+
+    public void actualizarEntrega(Entrega entrega) throws SQLException {
+        entregaDAO.update(entrega);
+    }
+
+    public void eliminarEntrega(int idEntrega) throws SQLException {
+        entregaDAO.delete(idEntrega);
+    }
+
+    public List<DetalleEntrega> listarEntregas() throws SQLException {
+        return entregaDAO.readDetalle();
+    }
+
+    public List<DetalleEntrega> listarEntregasDePedido(int idPedido) throws SQLException {
+        return entregaDAO.readDetallePorPedido(idPedido);
+    }
+
+    public List<DetalleEntrega> listarEntregasDeRepartidor(int idRepartidor) throws SQLException {
+        return entregaDAO.readDetallePorRepartidor(idRepartidor);
     }
 
     /**
@@ -95,8 +190,8 @@ public class ControladorDePedidos {
         try (Connection conexion = ConexionDB.conectar()) {
             conexion.setAutoCommit(false);
             try {
-                pedidoDAO.actualizarEstado(conexion, idPedido, EstadoPedido.ENTREGADO);
-                entregaDAO.guardar(conexion, entrega);
+                pedidoDAO.update(conexion, idPedido, EstadoPedido.ENTREGADO);
+                entregaDAO.create(conexion, entrega);
                 conexion.commit();
             } catch (SQLException | RuntimeException e) {
                 try {
